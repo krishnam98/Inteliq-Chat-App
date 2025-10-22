@@ -1,0 +1,32 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&display=swap");
+
+@import "tailwindcss";
+
+@theme {
+  --font-bricolage: "Bricolage Grotesque", sans-serif;
+}
+
+@utility font-bricolage {
+  font-family: var(--font-bricolage);
+}
+
+::-webkit-scrollbar {
+  width: 2px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.35);
+}
