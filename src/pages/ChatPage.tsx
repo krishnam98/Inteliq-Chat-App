@@ -104,7 +104,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white w-3/4 font-bricolage">
+    <div className="flex flex-col h-screen bg-white w-full font-bricolage">
       <Header handleNewChat={handleNewChat} />
 
       <div className="flex-1 overflow-y-auto px-6 py-8">
