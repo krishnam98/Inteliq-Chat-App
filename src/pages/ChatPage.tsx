@@ -32,7 +32,6 @@ const ChatPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachmentBoxRef = useRef<HTMLDivElement>(null);
   const addChat = useContext(ChatContextAPI)?.addChat;
-  const chatTitles = useContext(ChatContextAPI)?.chat || [];
 
   const suggestedPrompts: SuggestedPrompt[] = [
     {
@@ -101,7 +100,7 @@ const ChatPage = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    if (addChat) {
+    if (messages.length === 0 && addChat) {
       addChat({ id: Number(userMessage.id), title: inputVal });
     }
 

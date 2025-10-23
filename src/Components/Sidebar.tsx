@@ -1,8 +1,7 @@
 import { ArrowRightAlt, Search } from "@mui/icons-material";
 import { useContext, useState, useEffect } from "react";
-import { chatTitles } from "../SampleChats";
 import { ChatContextAPI } from "../Store/ChatContext";
-import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Sidebar = () => {
   const [activeTab, setActiveTab] = useState("Home");
