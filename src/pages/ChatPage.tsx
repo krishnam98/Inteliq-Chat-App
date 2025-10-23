@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import Header from "../Components/Header";
-import { Camera, Paperclip, Sparkles } from "lucide-react";
+import { Camera, Paperclip, Sparkles, Trash2, Plus } from "lucide-react";
 import { ChatContextAPI } from "../Store/ChatContext";
 
 interface Message {
@@ -14,12 +14,23 @@ interface SuggestedPrompt {
   text: string;
 }
 
+interface AttachedFile {
+  id: string;
+  file: File;
+  progress: number;
+}
+
 const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [showAttachmentBox, setShowAttachmentBox] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachmentBoxRef = useRef<HTMLDivElement>(null);
   const addChat = useContext(ChatContextAPI)?.addChat;
   const chatTitles = useContext(ChatContextAPI)?.chat || [];
 
@@ -42,6 +53,28 @@ const ChatPage = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        attachmentBoxRef.current &&
+        !attachmentBoxRef.current.contains(event.target as Node) &&
+        !(event.target as HTMLElement).closest(
+          "button[data-attachment-trigger]"
+        )
+      ) {
+        setShowAttachmentBox(false);
+      }
+    };
+
+    if (showAttachmentBox) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showAttachmentBox]);
 
   const generateMockResponse = (userMessage: string): string => {
     const responses = [
@@ -104,6 +137,50 @@ const ChatPage = () => {
     setMessages([]);
   };
 
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+
+    const newFiles: AttachedFile[] = Array.from(files).map((file) => ({
+      id: `${Date.now()}-${Math.random()}`,
+      file,
+      progress: 100,
+    }));
+
+    setAttachedFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const handleRemoveFile = (fileId: string) => {
+    setAttachedFiles((prev) => prev.filter((f) => f.id !== fileId));
+  };
+
+  const handleRemoveAllFiles = () => {
+    setAttachedFiles([]);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelect(e.dataTransfer.files);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  };
+
   return (
     <div className="flex flex-col h-screen bg-white w-full font-bricolage">
       <Header handleNewChat={handleNewChat} />
@@ -139,7 +216,6 @@ const ChatPage = () => {
                   </div>
                 </button>
               ))}
-              {/* Third prompt for medium screens and up */}
               <button
                 onClick={() =>
                   handleSuggestedPromptClick(suggestedPrompts[2].text)
@@ -220,9 +296,108 @@ const ChatPage = () => {
       </div>
 
       <div className="border-t border-gray-200 px-4 sm:px-6 py-4 bg-white">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto relative">
+          {showAttachmentBox && (
+            <div
+              ref={attachmentBoxRef}
+              className="absolute bottom-full left-0 mb-2 w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-700">
+                  Attached Files
+                </h3>
+                <div className="flex items-center gap-2">
+                  {attachedFiles.length > 0 && (
+                    <button
+                      onClick={handleRemoveAllFiles}
+                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Remove all files"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Add more files"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div
+                className={`p-4 min-h-[200px] max-h-[400px] overflow-y-auto ${
+                  isDragging ? "bg-blue-50" : ""
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {attachedFiles.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                    <Paperclip className="w-12 h-12 text-gray-300 mb-3" />
+                    <p className="text-sm text-gray-500 mb-1">
+                      Drag and drop files here
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      or click the + button to browse
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {attachedFiles.map((attachedFile) => (
+                      <div
+                        key={attachedFile.id}
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
+                      >
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Paperclip className="w-5 h-5 text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-700 truncate">
+                            {attachedFile.file.name}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formatFileSize(attachedFile.file.size)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFile(attachedFile.id)}
+                          className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Remove file"
+                        >
+                          <span className="text-2xl font-light leading-none">
+                            −
+                          </span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-end gap-2 sm:gap-3 bg-gray-50 rounded-2xl p-2 sm:p-3 border border-gray-200 focus-within:border-blue-500 transition-colors">
-            <button className="p-1 sm:p-1.5 text-gray-500 hover:text-gray-700 transition-colors bg-gray-200 rounded-full">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={(e) => handleFileSelect(e.target.files)}
+              className="hidden"
+            />
+            <button
+              data-attachment-trigger
+              onClick={() => setShowAttachmentBox(!showAttachmentBox)}
+              className={`p-1 sm:p-1.5 transition-colors rounded-full ${
+                showAttachmentBox
+                  ? "text-blue-600 bg-blue-100"
+                  : "text-gray-500 hover:text-gray-700 bg-gray-200"
+              }`}
+            >
               <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <button className="p-1 sm:p-1.5 text-gray-500 hover:text-gray-700 transition-colors bg-gray-200 rounded-full">
